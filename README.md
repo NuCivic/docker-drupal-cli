@@ -12,6 +12,7 @@
 - Grunt 0.1.13
 - Bower 1.3.12
 - Python 2.7.3
+- Ahoy v2
 
 Also:
 
