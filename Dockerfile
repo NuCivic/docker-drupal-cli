@@ -94,8 +94,20 @@ RUN composer global require drupal/coder
     # mv console.phar /usr/local/bin/drupal
 
 # Install ahoy
-RUN wget -q https://github.com/devinci-code/ahoy/releases/download/1.1.0/ahoy-`uname -s`-amd64 -O /usr/local/bin/ahoy && \
-    chmod +x /usr/local/bin/ahoy
+RUN ["bin/bash", "-c", "wget https://storage.googleapis.com/golang/go1.6.1.linux-amd64.tar.gz && \
+    tar -xzf go1.6.1.linux-amd64.tar.gz -C /usr/local && \
+    mkdir ~/go && \
+    echo 'export GOROOT=/usr/local/go' >> /etc/profile.d/goenv.sh && \
+    echo 'export GOPATH=$HOME/go' >> /etc/profile.d/goenv.sh && \
+    echo 'export PATH=$PATH:$GOROOT/bin:$GOPATH/bin' >> /etc/profile.d/goenv.sh && \
+    source /etc/profile.d/goenv.sh && \
+    go get -u github.com/golang/lint/golint && \
+    cd $GOPATH/src/github.com && \
+    go get -u github.com/DevinciHQ/ahoy && \
+    cd DevinciHQ/ahoy/ && \
+    bash build.sh -v && \
+    cp ahoy /usr/local/bin/ahoy && \
+    chmod +x /usr/local/bin/ahoy"]
 
 # PHP settings changes
 RUN sed -i 's/memory_limit = .*/memory_limit = 512M/' /etc/php5/cli/php.ini && \
