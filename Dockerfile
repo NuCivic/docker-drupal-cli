@@ -1,4 +1,4 @@
-FROM ubuntu:12.04
+FROM ubuntu:14.04
 
 MAINTAINER Leonid Makarov <leonid.makarov@blinkreaction.com>
 
@@ -12,11 +12,16 @@ ENV LC_ALL en_US.UTF-8
 RUN echo '#!/bin/sh\nexit 101' > /usr/sbin/policy-rc.d && chmod +x /usr/sbin/policy-rc.d
 
 # Adding https://launchpad.net/~ondrej/+archive/ubuntu/php5 PPA repo for php5.6
-RUN echo "deb http://ppa.launchpad.net/ondrej/php5-5.6/ubuntu precise main " >> /etc/apt/sources.list
+#RUN echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" >> /etc/apt/sources.list.d/php.list
+RUN \
+    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install python-software-properties software-properties-common && \
+    add-apt-repository ppa:ondrej/php && \
+    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-cache pkgnames | grep php
 
 # Basic packages
 RUN \
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install \
     supervisor \
     curl \
@@ -29,32 +34,26 @@ RUN \
     apt-transport-https \
     vim \
     patch \
-    --no-install-recommends && \
-    # Cleanup
-    DEBIAN_FRONTEND=noninteractive apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    --no-install-recommends
 
 # PHP packages
 RUN \
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install \
-    php5-common \
-    php5-cli \
-    php-pear \
-    php5-mysql \
-    php5-imagick \
-    php5-mcrypt \
-    php5-curl \
-    php5-gd \
-    php5-sqlite \
-    php5-json \
-    php5-memcache \
-    php5-intl \
-    php5-xdebug \
-    --no-install-recommends && \
-    # Cleanup
-    DEBIAN_FRONTEND=noninteractive apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    php7.1 \
+    php7.1-common \
+    php7.1-cli \
+    php7.1-curl \
+    php7.1-gd \
+    php7.1-imagick \
+    php7.1-intl \
+    php7.1-json \
+    php7.1-mcrypt \
+    php7.1-memcache\
+    php7.1-mysql \
+    php7.1-sqlite3 \
+    php7.1-xdebug \
+    php7.1-xml \
+    --no-install-recommends
 
 # Adding NodeJS repo (for up-to-date versions)
 # This command is a stripped down version of "curl --silent --location https://deb.nodesource.com/setup_0.12 | bash -"
@@ -64,13 +63,10 @@ RUN curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
 
 # Other language packages and dependencies
 RUN \
-    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install \
-    ruby1.9.1-full rlwrap nodejs \
-    --no-install-recommends && \
-    # Cleanup
-    DEBIAN_FRONTEND=noninteractive apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    ruby1.9.1-full rlwrap nodejs build-essential \
+    --no-install-recommends
 
 # Bundler
 RUN gem install bundler
@@ -98,8 +94,13 @@ RUN wget -q https://s3-us-west-1.amazonaws.com/nucivic-binaries/ahoy/2.0.0-alpha
     chmod +x /usr/local/bin/ahoy
 
 # PHP settings changes
-RUN sed -i 's/memory_limit = .*/memory_limit = 512M/' /etc/php5/cli/php.ini && \
-    sed -i 's/max_execution_time = .*/max_execution_time = 300/' /etc/php5/cli/php.ini
+#RUN sed -i 's/memory_limit = .*/memory_limit = 512M/' /usr/local/etc/php/conf.d/memory.ini
+#    sed -i 's/max_execution_time = .*/max_execution_time = 300/' /usr/local/etc/php/conf.d/php.ini
+
+# Cleanup
+RUN \
+    DEBIAN_FRONTEND=noninteractive apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /var/www
 
@@ -108,6 +109,9 @@ ENV PATH /root/.composer/vendor/bin:$PATH
 
 # Home directory for bundle installs
 ENV BUNDLE_PATH .bundler
+
+# Use docroot folder for Apache
+ENV DOCROOT docroot
 
 # SSH settigns
 COPY config/.ssh /root/.ssh
